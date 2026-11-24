@@ -84,7 +84,7 @@ export function LibraryPage() {
           BookRadar
         </p>
         <h1 className="m-0 font-heading text-4xl font-medium tracking-tight text-foreground sm:text-5xl">
-          Dashboard e biblioteca
+          Biblioteca
         </h1>
         <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
           Acompanhe seu progresso de leitura, encontre seus livros salvos e
@@ -170,7 +170,7 @@ export function LibraryPage() {
         </div>
 
         <Card className="bg-card/40">
-          <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-[1fr_220px] sm:p-5">
+          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_220px] ">
             <label className="flex flex-col gap-1 text-sm">
               <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Pesquisar na biblioteca
