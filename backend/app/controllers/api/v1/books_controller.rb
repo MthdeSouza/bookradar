@@ -9,7 +9,7 @@ module Api
         validation_error = validate_search_params
         return render_error(validation_error, :bad_request) if validation_error
 
-        result = OpenLibrary::SearchService.call(
+        result = ::OpenLibrary::SearchService.call(
           query: params[:q].to_s.strip,
           page: page_param,
           per_page: per_page_param
