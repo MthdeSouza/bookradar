@@ -43,8 +43,10 @@ Rails.application.configure do
   # Don't log any deprecations.
   config.active_support.report_deprecations = false
 
-  # Replace the default in-process memory cache store with a durable alternative.
-  config.cache_store = :solid_cache_store
+  # O cache das pesquisas é descartável e fica em memória: em hospedagens com disco
+  # efêmero (como o plano gratuito do Render) um cache em SQLite seria perdido a cada
+  # restart e a busca dependeria de arquivos gerados no build.
+  config.cache_store = :memory_store, { size: 32.megabytes }
 
   # Replace the default in-process and non-durable queuing backend for Active Job.
   config.active_job.queue_adapter = :solid_queue

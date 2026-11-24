@@ -1,0 +1,19 @@
+# Blueprint opcional do Render para a API do BookRadar (plano gratuito).
+# Também é possível criar o serviço manualmente pelo painel com os mesmos valores.
+services:
+  - type: web
+    name: bookradar-api
+    runtime: ruby
+    plan: free
+    rootDir: backend
+    buildCommand: bundle install && bundle exec rails db:prepare
+    startCommand: bundle exec puma -C config/puma.rb
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: RAILS_ENV
+        value: production
+      - key: SECRET_KEY_BASE
+        generateValue: true
+      # URL do frontend na Vercel, sem barra final (ex.: https://bookradar.vercel.app).
+      - key: FRONTEND_ORIGIN
+        sync: false

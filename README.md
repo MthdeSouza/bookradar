@@ -36,6 +36,7 @@ BookRadar é uma aplicação educacional para pesquisar livros e organizar uma b
 - Ruby 4.0.10
 - Ruby on Rails 8.1, em modo API
 - Puma
+- Rack CORS
 - SQLite
 - `Net::HTTP`
 - Rails Cache
@@ -73,14 +74,14 @@ O fluxo principal é:
 6. O Rails devolve ao frontend um contrato JSON próprio, com paginação e dados dos livros.
 7. Livros salvos pelo usuário são mantidos no `localStorage`, sob a chave `bookradar.library.v1`.
 
-Em desenvolvimento, o proxy do Vite encaminha requisições iniciadas por `/api` para o Rails em `http://localhost:3000`. Isso evita CORS no fluxo local. O middleware de CORS existe apenas como configuração comentada no backend.
+Em desenvolvimento, o proxy do Vite encaminha requisições iniciadas por `/api` para o Rails em `http://localhost:3000`, sem depender de CORS. Quando o frontend e a API são publicados em origens diferentes, o `rack-cors` libera a origem configurada em `FRONTEND_ORIGIN` (veja [Variáveis de ambiente](#variáveis-de-ambiente)).
 
 ### Persistência e cache
 
 Há dois mecanismos de armazenamento diferentes no projeto:
 
 - **Biblioteca pessoal:** persistida no `localStorage` do navegador. Ela pertence ao dispositivo e navegador usados, sem autenticação ou sincronização entre dispositivos.
-- **Cache das pesquisas da Open Library:** mantido pelo Rails por 15 minutos. Em desenvolvimento, o cache usa memória; em produção, a configuração seleciona Solid Cache.
+- **Cache das pesquisas da Open Library:** mantido pelo Rails por 15 minutos, em memória, tanto em desenvolvimento quanto em produção. Por ser descartável, a API não depende de armazenamento persistente para funcionar.
 
 SQLite, Active Record, Solid Queue e Solid Cable estão disponíveis na estrutura do Rails, mas o projeto não possui um modelo Active Record para salvar livros ou usuários no momento.
 
@@ -140,19 +141,32 @@ npm ci
 
 ## Variáveis de ambiente
 
+### Frontend
+
 O frontend fornece `frontend/.env.example`:
 
 ```dotenv
 VITE_API_BASE_URL=
 ```
 
-No desenvolvimento local, o valor pode permanecer vazio porque o Vite usa seu proxy para `/api`. Para apontar o frontend diretamente para outro backend, crie `frontend/.env` e informe a URL completa, por exemplo:
+No desenvolvimento local, o valor pode permanecer vazio porque o Vite usa seu proxy para `/api` (o proxy existe apenas no servidor de desenvolvimento). Para apontar o frontend diretamente para outro backend, crie `frontend/.env` e informe a URL completa, por exemplo:
 
 ```dotenv
 VITE_API_BASE_URL=http://localhost:3000
 ```
 
-Nesse caso, o backend publicado em outro domínio precisará ter uma política de CORS compatível configurada. A aplicação Rails não requer variáveis de ambiente específicas da Open Library.
+O valor é incorporado ao bundle durante `npm run build`: ao alterá-lo, é necessário gerar um novo build.
+
+### Backend
+
+| Variável | Quando usar | Descrição |
+| --- | --- | --- |
+| `FRONTEND_ORIGIN` | Frontend em outra origem | Origem liberada pelo CORS, sem barra final (ex.: `https://bookradar.vercel.app`). Aceita várias origens separadas por vírgula. Padrão: `http://localhost:5173`. |
+| `SECRET_KEY_BASE` | Produção | Obrigatória para iniciar o Rails em produção. Gere um valor com `ruby -rsecurerandom -e "puts SecureRandom.hex(64)"`. |
+| `RAILS_ENV` | Produção | Defina como `production`. |
+| `PORT` | Opcional | Porta do Puma. Padrão: `3000`. O Render define esta variável automaticamente. |
+
+A integração com a Open Library não requer variáveis de ambiente.
 
 ## Executando localmente
 
@@ -210,6 +224,60 @@ npm run build
 
 Os testes frontend cobrem o cliente HTTP, construção das consultas, persistência da biblioteca, estados da busca e interações de gerenciamento dos livros.
 
+## Deploy gratuito (Vercel + Render)
+
+O projeto está preparado para ser publicado manualmente com o frontend na **Vercel** e a API no **Render**, ambos em planos gratuitos. Este repositório não realiza deploy automático.
+
+> Limitações do plano gratuito do Render: o serviço é suspenso após um período sem acesso, então a primeira requisição depois da inatividade pode demorar; e o disco é efêmero. A API foi configurada para não depender de armazenamento persistente: o cache das pesquisas fica em memória e a biblioteca pessoal fica no navegador.
+
+Como cada lado precisa da URL do outro, siga esta ordem.
+
+### 1. API no Render
+
+Crie um **Web Service** conectado ao repositório (ou use o Blueprint `render.yaml` da raiz, que já traz estes valores):
+
+| Campo | Valor |
+| --- | --- |
+| Root Directory | `backend` |
+| Runtime | `Ruby` |
+| Build Command | `bundle install && bundle exec rails db:prepare` |
+| Start Command | `bundle exec puma -C config/puma.rb` |
+| Health Check Path | `/api/v1/health` |
+| Instance Type | `Free` |
+
+Variáveis de ambiente:
+
+| Variável | Valor |
+| --- | --- |
+| `RAILS_ENV` | `production` |
+| `SECRET_KEY_BASE` | valor aleatório (veja [Variáveis de ambiente](#variáveis-de-ambiente)) |
+| `FRONTEND_ORIGIN` | URL do frontend na Vercel (informada no passo 3) |
+
+O Puma usa a variável `PORT` definida pelo Render. A versão do Ruby (`4.0.10`) é lida de `backend/.ruby-version`; confirme no log do primeiro build que o Render a instalou.
+
+Após o deploy, valide a API:
+
+```bash
+curl https://SEU-SERVICO.onrender.com/api/v1/health
+```
+
+### 2. Frontend na Vercel
+
+Importe o repositório e configure:
+
+| Campo | Valor |
+| --- | --- |
+| Root Directory | `frontend` |
+| Framework Preset | `Vite` |
+| Build Command | `npm run build` |
+| Output Directory | `dist` |
+
+Adicione a variável `VITE_API_BASE_URL` com a URL pública da API no Render (ex.: `https://SEU-SERVICO.onrender.com`) e faça o deploy. O arquivo `frontend/vercel.json` já define esses comandos.
+
+### 3. Liberar o frontend no CORS
+
+Volte ao Render, defina `FRONTEND_ORIGIN` com a URL da Vercel (sem barra final, ex.: `https://bookradar.vercel.app`) e aguarde o novo deploy da API. As URLs de preview da Vercel têm origens diferentes; para usá-las, adicione-as a `FRONTEND_ORIGIN` separadas por vírgula.
+
 ## Integração com a Open Library
 
 O endpoint externo usado pelo backend é:
@@ -230,9 +298,8 @@ As possibilidades abaixo são ideias de evolução e **não estão implementadas
 - persistir livros e metadados pessoais em um backend próprio;
 - adicionar histórico de progresso e metas de leitura;
 - ampliar as opções de ordenação e filtros;
-- configurar CORS explicitamente quando frontend e backend forem hospedados em origens diferentes;
 - criar testes end-to-end do fluxo completo;
-- publicar ambientes de demonstração para frontend e API;
+- publicar ambientes de demonstração para frontend e API (o repositório já traz a configuração, mas o deploy ainda não foi realizado);
 - documentar observabilidade e estratégias operacionais de produção.
 
 ## Propósito educacional

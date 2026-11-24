@@ -63,7 +63,7 @@ O frontend não chama diretamente a Open Library. Ele pede resultados à API do 
 GET /api/v1/books/search?q=ruby&page=1&per_page=10
 ```
 
-Em desenvolvimento, o Vite encaminha chamadas iniciadas por `/api` para `http://localhost:3000`. Isso mantém o fluxo local simples, sem exigir uma configuração CORS para trabalhar com as duas aplicações.
+Em desenvolvimento, o Vite encaminha chamadas iniciadas por `/api` para `http://localhost:3000`, o que mantém o fluxo local simples. Quando frontend e API ficam em origens diferentes, o `rack-cors` libera a origem definida em `FRONTEND_ORIGIN`.
 
 ## Um projeto Rails menor do que o de costume, mas ainda Rails
 
@@ -166,7 +166,7 @@ A chave de cache do Rails inclui consulta, página e quantidade por página:
 "open_library:search:v1:q=#{normalized_query}:page=#{@page}:per_page=#{@per_page}"
 ```
 
-Assim, resultados diferentes não colidem. Em desenvolvimento, o cache Rails fica em memória. A configuração de produção usa Solid Cache.
+Assim, resultados diferentes não colidem. O cache do Rails fica em memória, em desenvolvimento e em produção. Por ser descartável, a API não precisa de armazenamento persistente para funcionar — uma restrição importante em hospedagens gratuitas com disco efêmero.
 
 É uma divisão útil: o cache do Rails reduz chamadas repetidas à Open Library entre clientes; o cache do React evita trabalho desnecessário durante a navegação no cliente.
 
@@ -263,7 +263,6 @@ O estado atual deixa algumas extensões futuras bem definidas:
 
 - persistência da biblioteca no backend;
 - autenticação e sincronização entre dispositivos;
-- configuração de CORS para frontend e API em origens separadas;
 - testes end-to-end;
 - deploy demonstrativo;
 - histórico de leitura e metas;
