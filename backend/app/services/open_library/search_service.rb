@@ -13,6 +13,7 @@ module OpenLibrary
     MAX_PER_PAGE = 50
     OPEN_TIMEOUT = 5
     READ_TIMEOUT = 10
+    CACHE_TTL = 15.minutes
     USER_AGENT = "BookRadar/1.0 (+https://github.com/MthdeSouza/bookradar)"
 
     def initialize(query:, page: DEFAULT_PAGE, per_page: DEFAULT_PER_PAGE)
@@ -24,18 +25,20 @@ module OpenLibrary
     def call
       return invalid_query_result if @query.empty?
 
-      response = perform_request
-      return response unless response[:success]
+      cached = Rails.cache.read(cache_key)
+      return cached if cached.is_a?(Hash) && cached[:success]
 
-      parse_response(response[:body])
-    rescue JSON::ParserError
-      failure("invalid_response", "Resposta inválida recebida da Open Library.")
-    rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error
-      failure("timeout", "Tempo limite excedido ao consultar a Open Library.")
-    rescue SocketError, Errno::ECONNREFUSED, Errno::EHOSTUNREACH, Errno::ENETUNREACH, OpenSSL::SSL::SSLError
-      failure("connection_error", "Não foi possível conectar à Open Library.")
-    rescue StandardError
-      failure("unavailable", "A Open Library está indisponível no momento.")
+      result = fetch_and_parse
+      Rails.cache.write(cache_key, result, expires_in: CACHE_TTL) if result[:success]
+      result
+    rescue JSON::ParserError => e
+      failure("invalid_response", "Resposta inválida recebida da Open Library.", exception: e)
+    rescue Net::OpenTimeout, Net::ReadTimeout, Timeout::Error => e
+      failure("timeout", "Tempo limite excedido ao consultar a Open Library.", exception: e)
+    rescue SocketError, Errno::ECONNREFUSED, Errno::EHOSTUNREACH, Errno::ENETUNREACH, OpenSSL::SSL::SSLError => e
+      failure("connection_error", "Não foi possível conectar à Open Library.", exception: e)
+    rescue StandardError => e
+      failure("unavailable", "A Open Library está indisponível no momento.", exception: e)
     end
 
     def self.call(query:, page: DEFAULT_PAGE, per_page: DEFAULT_PER_PAGE)
@@ -43,6 +46,18 @@ module OpenLibrary
     end
 
     private
+
+    def fetch_and_parse
+      response = perform_request
+      return response unless response[:success]
+
+      parse_response(response[:body])
+    end
+
+    def cache_key
+      normalized_query = @query.downcase.squish
+      "open_library:search:v1:q=#{normalized_query}:page=#{@page}:per_page=#{@per_page}"
+    end
 
     def normalize_positive_integer(value, default, max = nil)
       number = Integer(value, exception: false)
@@ -85,9 +100,9 @@ module OpenLibrary
       if code >= 200 && code < 300
         { success: true, body: response.body }
       elsif code >= 500 || code == 429
-        failure("unavailable", "A Open Library está indisponível no momento.")
+        failure("unavailable", "A Open Library está indisponível no momento.", upstream_status: code)
       else
-        failure("upstream_error", "Não foi possível obter resultados da Open Library.")
+        failure("upstream_error", "Não foi possível obter resultados da Open Library.", upstream_status: code)
       end
     end
 
@@ -128,7 +143,8 @@ module OpenLibrary
       "https://covers.openlibrary.org/b/id/#{cover_id}-M.jpg"
     end
 
-    def failure(code, message)
+    def failure(code, message, upstream_status: nil, exception: nil)
+      log_failure(code, exception, upstream_status: upstream_status) if loggable_failure?(code)
       {
         success: false,
         error: {
@@ -136,6 +152,27 @@ module OpenLibrary
           message: message
         }
       }
+    end
+
+    def loggable_failure?(code)
+      %w[invalid_response timeout connection_error unavailable upstream_error].include?(code)
+    end
+
+    def log_failure(code, exception = nil, upstream_status: nil)
+      return unless defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
+
+      details = {
+        service: "OpenLibrary::SearchService",
+        code: code,
+        page: @page,
+        per_page: @per_page
+      }
+      details[:upstream_status] = upstream_status if upstream_status
+      details[:exception] = exception.class.name if exception
+
+      Rails.logger.warn("[OpenLibrary::SearchService] #{details.map { |k, v| "#{k}=#{v}" }.join(' ')}")
+    rescue StandardError
+      # Evita que falhas de log afetem o fluxo principal.
     end
   end
 end

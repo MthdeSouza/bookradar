@@ -17,5 +17,6 @@ export function useBookSearch({ query, page, perPage = 10 }: UseBookSearchParams
     enabled: trimmedQuery.length > 0,
     placeholderData: keepPreviousData,
     staleTime: 30_000,
+    gcTime: 10 * 60 * 1000,
   });
 }

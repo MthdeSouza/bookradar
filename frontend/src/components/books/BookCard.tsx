@@ -23,6 +23,7 @@ export function BookCard({ book, className, actions }: BookCardProps) {
               src={book.cover_url}
               alt={book.title ? `Capa de ${book.title}` : "Capa do livro"}
               loading="lazy"
+              decoding="async"
               className="mx-auto aspect-[2/3] w-28 rounded-xl object-cover shadow-sm sm:w-full"
             />
           ) : (

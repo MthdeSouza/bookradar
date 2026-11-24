@@ -1,10 +1,13 @@
 import { BookOpen, Search } from "lucide-react";
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { FeedbackToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { LibraryProvider, useLibrary } from "@/contexts/LibraryContext";
-import { LibraryPage } from "@/features/library/LibraryPage";
 import { BookSearchPage } from "@/features/search/BookSearchPage";
+
+const LibraryPage = lazy(() =>
+  import("@/features/library/LibraryPage").then((module) => ({ default: module.LibraryPage })),
+);
 
 type AppView = "search" | "library";
 
@@ -42,7 +45,19 @@ function AppContent() {
       </div>
 
       <main className="flex-1">
-        {view === "search" ? <BookSearchPage /> : <LibraryPage />}
+        {view === "search" ? (
+          <BookSearchPage />
+        ) : (
+          <Suspense
+            fallback={
+              <div className="mx-auto w-full max-w-6xl px-4 py-8 text-sm text-muted-foreground sm:px-6 lg:px-8">
+                Carregando biblioteca...
+              </div>
+            }
+          >
+            <LibraryPage />
+          </Suspense>
+        )}
       </main>
 
       <FeedbackToast feedback={feedback} onClose={clearFeedback} />

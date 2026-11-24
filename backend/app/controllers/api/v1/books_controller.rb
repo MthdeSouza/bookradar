@@ -18,7 +18,9 @@ module Api
         if result[:success]
           render json: serialized_success(result[:data]), status: :ok
         else
-          render json: { error: safe_error(result[:error]) }, status: status_for_error(result[:error][:code])
+          status = status_for_error(result[:error][:code])
+          log_search_failure(result[:error], status)
+          render json: { error: safe_error(result[:error]) }, status: status
         end
       end
 
@@ -106,6 +108,16 @@ module Api
         else
           :bad_gateway
         end
+      end
+
+      def log_search_failure(error, status)
+        return unless defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
+
+        Rails.logger.info(
+          "[BooksController#search] failure code=#{error[:code]} status=#{Rack::Utils.status_code(status)}"
+        )
+      rescue StandardError
+        # Evita que falhas de log afetem a resposta.
       end
     end
   end

@@ -16,6 +16,7 @@ export function LibraryBookPreview({ book }: LibraryBookPreviewProps) {
             alt={book.title ? `Capa de ${book.title}` : "Capa do livro"}
             className="h-full w-full object-cover"
             loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
