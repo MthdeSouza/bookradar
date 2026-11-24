@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { BookmarkPlus, Check, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BookCard } from "@/components/books/BookCard";
 import { BookSearchPagination } from "@/components/books/BookSearchPagination";
@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useBookSearch } from "@/hooks/useBookSearch";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useLibrary } from "@/hooks/useLibrary";
 
 const RESULTS_PER_PAGE = 10;
 
@@ -19,6 +20,7 @@ export function BookSearchPage() {
   const [page, setPage] = useState(1);
   const debouncedQuery = useDebouncedValue(inputValue, 400);
   const normalizedQuery = debouncedQuery.trim();
+  const { addBook, removeBook, isInLibrary } = useLibrary();
 
   useEffect(() => {
     setPage(1);
@@ -104,9 +106,42 @@ export function BookSearchPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            {books.map((book, index) => (
-              <BookCard key={`${book.key ?? "book"}-${index}-${page}`} book={book} />
-            ))}
+            {books.map((book, index) => {
+              const saved = book.key ? isInLibrary(book.key) : false;
+              return (
+                <BookCard
+                  key={`${book.key ?? "book"}-${index}-${page}`}
+                  book={book}
+                  actions={
+                    <div className="flex flex-wrap items-center gap-2">
+                      {saved && book.key ? (
+                        <>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                            <Check className="size-3.5" aria-hidden="true" />
+                            Na biblioteca
+                          </span>
+                          <Button type="button" variant="outline" size="sm" onClick={() => removeBook(book.key!)}>
+                            <Trash2 data-icon="inline-start" />
+                            Remover
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => addBook(book)}
+                          disabled={!book.key}
+                          title={!book.key ? "Este livro não possui identificador da Open Library." : undefined}
+                        >
+                          <BookmarkPlus data-icon="inline-start" />
+                          Salvar na biblioteca
+                        </Button>
+                      )}
+                    </div>
+                  }
+                />
+              );
+            })}
           </div>
 
           <BookSearchPagination

@@ -1,14 +1,16 @@
 import { BookOpen } from "lucide-react";
+import type { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import type { Book } from "@/types/book";
+import type { BookDisplay } from "@/types/book";
 import { cn } from "cn";
 
 interface BookCardProps {
-  book: Book;
+  book: BookDisplay;
   className?: string;
+  actions?: ReactNode;
 }
 
-export function BookCard({ book, className }: BookCardProps) {
+export function BookCard({ book, className, actions }: BookCardProps) {
   const authors = book.authors.length > 0 ? book.authors.join(", ") : "Autor desconhecido";
   const year = book.first_publish_year ? String(book.first_publish_year) : "Ano não informado";
 
@@ -54,6 +56,8 @@ export function BookCard({ book, className }: BookCardProps) {
               </dd>
             </div>
           </dl>
+
+          {actions ? <div className="pt-1">{actions}</div> : null}
         </CardContent>
       </div>
     </Card>

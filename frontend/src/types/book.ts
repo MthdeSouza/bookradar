@@ -8,6 +8,11 @@ export interface Book {
   edition_count: number | null;
 }
 
+export type BookDisplay = Pick<
+  Book,
+  "key" | "title" | "authors" | "first_publish_year" | "cover_url" | "cover_id" | "edition_count"
+>;
+
 export interface Pagination {
   page: number;
   per_page: number;
