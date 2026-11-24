@@ -6,7 +6,7 @@ interface StateCardProps {
   description: string;
 }
 
-function StateCard({
+export function StateCard({
   title,
   description,
   icon,

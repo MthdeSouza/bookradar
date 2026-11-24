@@ -1,3 +1,4 @@
+import { StateCard } from "@/components/books/BookSearchStates";
 import { LibraryBookItem } from "@/components/library/LibraryBookItem";
 import { LibraryDashboardSection } from "@/components/library/LibraryDashboardSection";
 import { LibraryStatCard } from "@/components/library/LibraryStatCard";
@@ -211,39 +212,17 @@ export function LibraryPage() {
         </Card>
 
         {books.length === 0 ? (
-          <Card className="border-dashed bg-card/40 text-center">
-            <CardContent className="flex flex-col items-center gap-3 py-12">
-              <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                <LibraryBig className="size-5" aria-hidden="true" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-heading text-base font-medium text-foreground">
-                  Sua biblioteca está vazia
-                </p>
-                <p className="mx-auto max-w-md text-sm text-muted-foreground">
-                  Pesquise livros e salve seus favoritos para organizar sua
-                  leitura, mesmo sem conexão com a API depois.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <StateCard
+            icon={<LibraryBig className="size-5" aria-hidden="true" />}
+            title="Sua biblioteca está vazia"
+            description="Pesquise livros e salve seus favoritos para organizar sua leitura, mesmo sem conexão com a API depois."
+          />
         ) : filteredBooks.length === 0 ? (
-          <Card className="border-dashed bg-card/40 text-center">
-            <CardContent className="flex flex-col items-center gap-3 py-10">
-              <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                <Search className="size-5" aria-hidden="true" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-heading text-base font-medium text-foreground">
-                  Nenhum livro encontrado
-                </p>
-                <p className="mx-auto max-w-md text-sm text-muted-foreground">
-                  Ajuste a busca ou o filtro de status para ver outros livros da
-                  sua biblioteca.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <StateCard
+            icon={<Search className="size-5" aria-hidden="true" />}
+            title="Nenhum livro encontrado"
+            description="Ajuste a busca ou o filtro de status para ver outros livros da sua biblioteca."
+          />
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {filteredBooks.map((book) => (
